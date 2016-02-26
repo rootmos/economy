@@ -2,16 +2,36 @@
 
 import Arithmetics
 import Data.Aeson
+import Data.Scientific
+import Data.Maybe
 import Options.Applicative
 import qualified Data.ByteString.Lazy as B
+import qualified Data.Text as T
 import GHC.Generics
 
-type Money = Int
+newtype Money = Money Int
+    deriving (Show, Eq, Ord)
+
+instance Num Money where
+    (Money n) + (Money m) = Money (n + m)
+    (Money n) * (Money m) = Money (n * m)
+    negate (Money n) = Money (negate n)
+    abs (Money n) = Money (abs n)
+    fromInteger n = Money (fromInteger n)
+    signum (Money n) = Money (signum n)
+
 type Name = String
 
-data Economy = Economy { incomes :: [Income] , expenses :: [Expense] }
+data Economy = Economy { incomes :: [Income], expenses :: [Expense] }
     deriving (Show, Generic)
 instance FromJSON Economy
+
+instance FromJSON Money where
+    parseJSON (Number n) = pure $ Money (fromJust $ toBoundedInteger n)
+    parseJSON (String s) = case arithmetics (T.unpack s) of
+                             Left e -> fail e
+                             Right n -> pure (Money n)
+    parseJSON _ = empty
 
 
 data Expense = Expense { expenseName :: Name

@@ -3,6 +3,7 @@ module Arithmetics (arithmetics) where
 import Test.Hspec
 import Text.Parsec
 import Data.Bifunctor
+import Data.Either
 
 type Number = Int
 
@@ -13,22 +14,20 @@ data Expr = Literal Number | Plus Expr Expr | Minus Expr Expr | Mult Expr Expr |
     deriving (Show, Eq)
 
 arithmeticsParser :: Parsec String st Expr
-arithmeticsParser = chainl literal (try binaryOps) (Literal 0)
+arithmeticsParser = spaces >> chainl1 (literal) (binaryOps) <* eof
+    where
+        binaryOps = choice [plusOp, minusOp, multOp, divOp]
+        plusOp = char '+' >> spaces >> return Plus
+        minusOp = char '-' >> spaces >> return Minus
+        multOp = char '*' >> spaces >> return Mult
+        divOp = char '/' >> spaces >> return Div
 
 literal :: Parsec String st Expr
 literal = do
-    skipMany space
-    sign <- option 1 (char '-' >> return (-1))
+    sign <- option 1 (char '-' >> spaces >> return (-1))
     n <- many1 digit
+    spaces
     return $ Literal (sign * (read n))
-
-binaryOps :: Parsec String st (Expr -> Expr -> Expr)
-binaryOps = skipMany space >> choice [plusOp, minusOp, multOp, divOp]
-    where
-        plusOp = char '+' >> return Plus
-        minusOp = char '-' >> return Minus
-        multOp = char '*' >> return Mult
-        divOp = char '/' >> return Div
 
 parseArithmetics :: String -> Either String Expr
 parseArithmetics = first show . parse arithmeticsParser "parsing arithmetics"
@@ -69,14 +68,18 @@ main = hspec $ do
             parseArithmetics "142" `shouldBe` Right (Literal 142)
         it "parses a negative number" $ do
             parseArithmetics "-17" `shouldBe` Right (Literal (-17))
+        it "parses a negative number (with a space): - 17" $ do
+            parseArithmetics "- 17" `shouldBe` Right (Literal (-17))
         it "ignores whitespace before a number" $ do
             parseArithmetics " \t 79" `shouldBe` Right (Literal 79)
         it "ignores whitespace after a number" $ do
-            parseArithmetics "79 " `shouldBe` Right (Literal 79)
+            parseArithmetics "79 \t \n " `shouldBe` Right (Literal 79)
         it "parses 1+2" $ do
             parseArithmetics "1+2" `shouldBe` Right (Plus (Literal 1) (Literal 2))
         it "ignores whitespace before +" $ do
-            parseArithmetics "1 \t  \n  +2" `shouldBe` Right (Plus (Literal 1) (Literal 2))
+            parseArithmetics "1  \n \t  +2" `shouldBe` Right (Plus (Literal 1) (Literal 2))
+        it "ignores whitespace after +" $ do
+            parseArithmetics "1+ \t \n 2" `shouldBe` Right (Plus (Literal 1) (Literal 2))
         it "parses 1+2+3 left-associatively" $ do
             parseArithmetics "1+2+3" `shouldBe` Right (Plus (Plus (Literal 1) (Literal 2)) (Literal 3))
 
@@ -104,3 +107,13 @@ main = hspec $ do
             parseArithmetics "1+2/3" `shouldBe` Right (Div (Plus (Literal 1) (Literal 2)) (Literal 3))
         it "parses 1+2/3+4 left-associatively" $ do
             parseArithmetics "1+2/3+4" `shouldBe` Right (Plus (Div (Plus (Literal 1) (Literal 2)) (Literal 3)) (Literal 4))
+
+
+        it "complains when faced with unknown characters: before a number" $ do
+            parseArithmetics "a2" `shouldSatisfy` isLeft
+        it "complains when faced with unknown characters: before a number (after an operator)" $ do
+            parseArithmetics "1+a2" `shouldSatisfy` isLeft
+        it "complains when faced with unknown characters: before an operator" $ do
+            parseArithmetics "1a+2" `shouldSatisfy` isLeft
+        it "complains when faced with unknown characters: after an operator" $ do
+            parseArithmetics "1+a2" `shouldSatisfy` isLeft
