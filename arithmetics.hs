@@ -13,25 +13,13 @@ data Expr = Literal Number | Plus Expr Expr
     deriving (Show, Eq)
 
 arithmeticsParser :: Parsec String st Expr
-arithmeticsParser = try aPlusb <|> literal
-
-aPlusb :: Parsec String st Expr
-aPlusb = do
-    a <- literal
-    _ <- plus
-    b <- literal
-    return $ Plus a b
+arithmeticsParser = chainl literal (try plus) (Literal 0)
 
 literal :: Parsec String st Expr
-literal = do
-    skipMany space
-    n <- many digit
-    return $ Literal (read n)
+literal = skipMany space >> many digit >>= return . Literal . read
 
-plus :: Parsec String st Char
-plus = do
-    skipMany space
-    char '+'
+plus :: Parsec String st (Expr -> Expr -> Expr)
+plus = skipMany space >> char '+' >> return Plus
 
 parseArithmetics :: String -> Either String Expr
 parseArithmetics input = first show $ parse arithmeticsParser "parsing arithmetics" input
@@ -56,9 +44,13 @@ main = hspec $ do
         it "parses a number" $ do
             parseArithmetics "142" `shouldBe` Right (Literal 142)
         it "ignores whitespace before a number" $ do
-            parseArithmetics " \t 79\n" `shouldBe` Right (Literal 79)
+            parseArithmetics " \t 79" `shouldBe` Right (Literal 79)
+        it "ignores whitespace after a number" $ do
+            parseArithmetics "79 " `shouldBe` Right (Literal 79)
         it "parses 1+2" $ do
             parseArithmetics "1+2" `shouldBe` Right (Plus (Literal 1) (Literal 2))
         it "ignores whitespace before +" $ do
             parseArithmetics "1 \t  \n  +2" `shouldBe` Right (Plus (Literal 1) (Literal 2))
+        it "parses 1+2+3 left-associatively" $ do
+            parseArithmetics "1+2+3" `shouldBe` Right (Plus (Plus (Literal 1) (Literal 2)) (Literal 3))
 
