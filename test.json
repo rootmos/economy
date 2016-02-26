@@ -1,0 +1,24 @@
+{
+    "incomes": [
+        {
+            "name": "Foo Inc",
+            "amount": 10000
+        }
+    ],
+    "expenses": [
+        {
+            "name": "Montly",
+            "amount": 100
+        },
+        {
+            "name": "Quarterly",
+            "amount": 1000,
+            "months": [1, 4, 7, 10] 
+        },
+        {
+            "name": "Half-yearly",
+            "amount": 3000,
+            "months": [5, 11] 
+        }
+    ]
+}
