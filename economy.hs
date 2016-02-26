@@ -95,13 +95,16 @@ data Config = Config { dataFilename :: FilePath }
 configParser :: Parser Config
 configParser = Config <$> argument str (metavar "DATA")
 
-montlyEconomy :: Economy -> Int -> Economy
-montlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` month) (incomes economy)
+monthlyEconomy :: Economy -> Int -> Economy
+monthlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` month) (incomes economy)
                                       , expenses = filter (`willOccurInMonth` month) (expenses economy)
                                       }
 
 summarize :: Economy -> IO ()
-summarize economy = printBox $ hsep 2 left [names, amounts]
+summarize economy = printBox $ hsep 3 bottom $ map (economyBox . monthlyEconomy economy) [1..12]
+
+economyBox :: Economy -> Box
+economyBox economy = hsep 1 left [names, amounts]
     where
         names = vcat left . map text $ columnified !! 0
         amounts = vcat right . map text $ columnified !! 1
@@ -130,5 +133,5 @@ main :: IO ()
 main = do
     config <- execParser $ info (helper <*> configParser) fullDesc
     economy <- fromFile (dataFilename config)
-    summarize $ montlyEconomy economy 5
+    summarize economy
 

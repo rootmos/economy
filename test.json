@@ -7,7 +7,7 @@
     ],
     "expenses": [
         {
-            "name": "Montly",
+            "name": "Monthly",
             "amount": "4*100/2"
         },
         {
