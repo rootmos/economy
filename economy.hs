@@ -108,10 +108,12 @@ summarize economy = printBox $ hsep 2 left [names, amounts]
         columnified = transpose $ listify economy
 
 listify :: Economy -> [[String]]
-listify economy = (map listifyIncome (incomes economy)) ++ (map listifyExpense (expenses economy))
+listify economy = (map listifyIncome (incomes economy)) ++ (map listifyExpense (expenses economy)) ++ separator ++ summarow
     where
         listifyIncome i = map ($ i) [incomeName, show . money, maybeEmptyString . incomeMonths]
         listifyExpense e = map ($ e) [expenseName, show . money, maybeEmptyString . expenseMonths]
+        separator = [["---", "---", "---"]]
+        summarow = [["", show . money $ economy, ""]]
 
 maybeEmptyString :: Show a => Maybe a -> String
 maybeEmptyString (Just x) = show x
