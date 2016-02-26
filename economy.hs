@@ -95,11 +95,16 @@ montlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` mon
                                       , expenses = filter (`willOccurInMonth` month) (expenses economy)
                                       }
 
+fromFile :: FilePath -> IO Economy
+fromFile path = do
+    datafileContent <- B.readFile path 
+    case eitherDecode datafileContent of
+      Left err -> fail err
+      Right economy -> return economy 
+
 main :: IO ()
 main = do
     config <- execParser $ info (helper <*> configParser) fullDesc
-    datafileContent <- B.readFile (dataFilename config)
-    case eitherDecode datafileContent of
-      Left err -> fail err
-      Right economy -> putStrLn . show . money $ montlyEconomy economy 5
+    economy <- fromFile (dataFilename config)
+    putStrLn . show . money $ montlyEconomy economy 5
 
