@@ -16,7 +16,11 @@ arithmeticsParser :: Parsec String st Expr
 arithmeticsParser = chainl literal (try binaryOps) (Literal 0)
 
 literal :: Parsec String st Expr
-literal = skipMany space >> many digit >>= return . Literal . read
+literal = do
+    skipMany space
+    sign <- option 1 (char '-' >> return (-1))
+    n <- many1 digit
+    return $ Literal (sign * (read n))
 
 binaryOps :: Parsec String st (Expr -> Expr -> Expr)
 binaryOps = skipMany space >> choice [plus, minus, mult]
@@ -57,6 +61,8 @@ main = hspec $ do
             parseArithmetics "7" `shouldBe` Right (Literal 7)
         it "parses a number" $ do
             parseArithmetics "142" `shouldBe` Right (Literal 142)
+        it "parses a negative number" $ do
+            parseArithmetics "-17" `shouldBe` Right (Literal (-17))
         it "ignores whitespace before a number" $ do
             parseArithmetics " \t 79" `shouldBe` Right (Literal 79)
         it "ignores whitespace after a number" $ do
@@ -70,6 +76,8 @@ main = hspec $ do
 
         it "parses 1-2" $ do
             parseArithmetics "1-2" `shouldBe` Right (Minus (Literal 1) (Literal 2))
+        it "parses 1--2" $ do
+            parseArithmetics "1--2" `shouldBe` Right (Minus (Literal 1) (Literal (-2)))
         it "parses 1-2+3 left-associatively" $ do
             parseArithmetics "1-2+3" `shouldBe` Right (Plus (Minus (Literal 1) (Literal 2)) (Literal 3))
         it "parses 1+2-3 left-associatively" $ do
