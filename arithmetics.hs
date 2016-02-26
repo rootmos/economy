@@ -9,7 +9,7 @@ type Number = Int
 arithmetics :: String -> Either String Number
 arithmetics = second doArithmetics . parseArithmetics
 
-data Expr = Literal Number | Plus Expr Expr | Minus Expr Expr | Mult Expr Expr
+data Expr = Literal Number | Plus Expr Expr | Minus Expr Expr | Mult Expr Expr | Div Expr Expr
     deriving (Show, Eq)
 
 arithmeticsParser :: Parsec String st Expr
@@ -23,11 +23,12 @@ literal = do
     return $ Literal (sign * (read n))
 
 binaryOps :: Parsec String st (Expr -> Expr -> Expr)
-binaryOps = skipMany space >> choice [plus, minus, mult]
+binaryOps = skipMany space >> choice [plus, minus, mult, div]
     where
         plus = char '+' >> return Plus
         minus = char '-' >> return Minus
         mult = char '*' >> return Mult
+        div = char '/' >> return Div
 
 parseArithmetics :: String -> Either String Expr
 parseArithmetics = first show . parse arithmeticsParser "parsing arithmetics"
@@ -37,6 +38,7 @@ doArithmetics (Literal n) = n
 doArithmetics (Plus a b) = doArithmetics a + doArithmetics b
 doArithmetics (Minus a b) = doArithmetics a - doArithmetics b
 doArithmetics (Mult a b) = doArithmetics a * doArithmetics b
+doArithmetics (Div a b) = doArithmetics a `div` doArithmetics b
 
 main :: IO ()
 main = hspec $ do
@@ -55,6 +57,10 @@ main = hspec $ do
             doArithmetics (Mult (Literal 4) (Literal 3)) `shouldBe` 12
         it "calculates 2*(1-3)" $ do
             doArithmetics (Mult (Literal 2) (Minus (Literal 1) (Literal 3))) `shouldBe` -4
+        it "calculates 15/3" $ do
+            doArithmetics (Div (Literal 15) (Literal 3)) `shouldBe` 5
+        it "truncates division: 1/2 = 0" $ do
+            doArithmetics (Div (Literal 1) (Literal 2)) `shouldBe` 0
 
     describe "parseArithmetics" $ do
         it "parses a lone digit" $ do
@@ -89,3 +95,10 @@ main = hspec $ do
             parseArithmetics "1+2*3" `shouldBe` Right (Mult (Plus (Literal 1) (Literal 2)) (Literal 3))
         it "parses 1*2-3 left-associatively" $ do
             parseArithmetics "1*2-3" `shouldBe` Right (Minus (Mult (Literal 1) (Literal 2)) (Literal 3))
+
+        it "parses 1/2" $ do
+            parseArithmetics "1/2" `shouldBe` Right (Div (Literal 1) (Literal 2))
+        it "parses 1+2/3 left-associatively" $ do
+            parseArithmetics "1+2/3" `shouldBe` Right (Div (Plus (Literal 1) (Literal 2)) (Literal 3))
+        it "parses 1+2/3+4 left-associatively" $ do
+            parseArithmetics "1+2/3+4" `shouldBe` Right (Plus (Div (Plus (Literal 1) (Literal 2)) (Literal 3)) (Literal 4))
