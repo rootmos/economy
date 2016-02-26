@@ -50,17 +50,17 @@ instance ToMoney Expense where
 instance ToMoney Income where
     money = incomeAmount
 
-class ToMoney a => MontlyTransaction a where
+instance ToMoney Economy where
+    money economy = sum (map money $ incomes economy) + sum (map money $ expenses economy)
+
+class MaybeMontly a where
     willOccurInMonth :: a -> Int -> Bool
 
-    amount :: a -> Int -> Maybe Money
-    amount x m = if x `willOccurInMonth` m then (Just (money x)) else Nothing
-
-instance MontlyTransaction Expense where
+instance MaybeMontly Expense where
     willOccurInMonth (Expense { expenseMonths = Just months }) month = month `elem` months
     willOccurInMonth _ _ = True
 
-instance MontlyTransaction Income where
+instance MaybeMontly Income where
     willOccurInMonth (Income { incomeMonths = Just months }) month = month `elem` months
     willOccurInMonth _ _ = True
 
@@ -73,8 +73,6 @@ montlyEconomy :: Economy -> Int -> Economy
 montlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` month) (incomes economy)
                                       , expenses = filter (`willOccurInMonth` month) (expenses economy)
                                       }
-balance :: Economy -> Money
-balance economy = sum (map money $ incomes economy) + sum (map money $ expenses economy)
 
 main :: IO ()
 main = do
@@ -83,5 +81,5 @@ main = do
     let eitherEconomy = eitherDecode datafileContent :: Either String Economy
     case eitherEconomy of
       Left err -> fail err
-      Right economy -> putStrLn . show . balance $ montlyEconomy economy 5
+      Right economy -> putStrLn . show . money $ montlyEconomy economy 5
 
