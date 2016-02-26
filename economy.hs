@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
 
+import Arithmetics
 import Data.Aeson
 import Options.Applicative
 import qualified Data.ByteString.Lazy as B
@@ -78,8 +79,7 @@ main :: IO ()
 main = do
     config <- execParser $ info (helper <*> configParser) fullDesc
     datafileContent <- B.readFile (dataFilename config)
-    let eitherEconomy = eitherDecode datafileContent :: Either String Economy
-    case eitherEconomy of
+    case eitherDecode datafileContent of
       Left err -> fail err
       Right economy -> putStrLn . show . money $ montlyEconomy economy 5
 

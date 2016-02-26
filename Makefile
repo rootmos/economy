@@ -1,7 +1,13 @@
 GHC_OPTS=-Wall
 
-economy: economy.hs
-	ghc $(GHC_OPTS) $<
+SRC=economy.hs arithmetics.hs
+
+economy: $(SRC)
+	ghc $(GHC_OPTS) $^
+
+.PHONY: test
+test: $(SRC)
+	runhaskell $(GHC_OPTS) arithmetics.hs
 
 .PHONY: deps
 deps:
