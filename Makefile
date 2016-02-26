@@ -11,4 +11,8 @@ test: $(SRC)
 
 .PHONY: deps
 deps:
-	cabal install optparse-applicative aeson
+	cabal install optparse-applicative aeson boxes
+
+.PHONY: ghci
+ghci: $(SRC)
+	ghci $^

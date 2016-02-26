@@ -4,13 +4,18 @@ import Arithmetics
 import Data.Aeson
 import Data.Scientific
 import Data.Maybe
+import Data.List (transpose)
 import Options.Applicative
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Text as T
 import GHC.Generics
+import Text.PrettyPrint.Boxes
 
 newtype Money = Money Int
-    deriving (Show, Eq, Ord)
+    deriving (Eq, Ord)
+
+instance Show Money where
+    show (Money x) = show x
 
 instance Num Money where
     (Money n) + (Money m) = Money (n + m)
@@ -95,6 +100,23 @@ montlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` mon
                                       , expenses = filter (`willOccurInMonth` month) (expenses economy)
                                       }
 
+summarize :: Economy -> IO ()
+summarize economy = printBox $ hsep 2 left [names, amounts]
+    where
+        names = vcat left . map text $ columnified !! 0
+        amounts = vcat right . map text $ columnified !! 1
+        columnified = transpose $ listify economy
+
+listify :: Economy -> [[String]]
+listify economy = (map listifyIncome (incomes economy)) ++ (map listifyExpense (expenses economy))
+    where
+        listifyIncome i = map ($ i) [incomeName, show . money, maybeEmptyString . incomeMonths]
+        listifyExpense e = map ($ e) [expenseName, show . money, maybeEmptyString . expenseMonths]
+
+maybeEmptyString :: Show a => Maybe a -> String
+maybeEmptyString (Just x) = show x
+maybeEmptyString Nothing = ""
+
 fromFile :: FilePath -> IO Economy
 fromFile path = do
     datafileContent <- B.readFile path 
@@ -106,5 +128,5 @@ main :: IO ()
 main = do
     config <- execParser $ info (helper <*> configParser) fullDesc
     economy <- fromFile (dataFilename config)
-    putStrLn . show . money $ montlyEconomy economy 5
+    summarize $ montlyEconomy economy 5
 

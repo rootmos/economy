@@ -8,7 +8,7 @@
     "expenses": [
         {
             "name": "Montly",
-            "amount": 100
+            "amount": "4*100/2"
         },
         {
             "name": "Quarterly",
