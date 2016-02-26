@@ -23,12 +23,12 @@ literal = do
     return $ Literal (sign * (read n))
 
 binaryOps :: Parsec String st (Expr -> Expr -> Expr)
-binaryOps = skipMany space >> choice [plus, minus, mult, div]
+binaryOps = skipMany space >> choice [plusOp, minusOp, multOp, divOp]
     where
-        plus = char '+' >> return Plus
-        minus = char '-' >> return Minus
-        mult = char '*' >> return Mult
-        div = char '/' >> return Div
+        plusOp = char '+' >> return Plus
+        minusOp = char '-' >> return Minus
+        multOp = char '*' >> return Mult
+        divOp = char '/' >> return Div
 
 parseArithmetics :: String -> Either String Expr
 parseArithmetics = first show . parse arithmeticsParser "parsing arithmetics"
@@ -84,6 +84,8 @@ main = hspec $ do
             parseArithmetics "1-2" `shouldBe` Right (Minus (Literal 1) (Literal 2))
         it "parses 1--2" $ do
             parseArithmetics "1--2" `shouldBe` Right (Minus (Literal 1) (Literal (-2)))
+        it "parses -1--2" $ do
+            parseArithmetics "-1--2" `shouldBe` Right (Minus (Literal (-1)) (Literal (-2)))
         it "parses 1-2+3 left-associatively" $ do
             parseArithmetics "1-2+3" `shouldBe` Right (Plus (Minus (Literal 1) (Literal 2)) (Literal 3))
         it "parses 1+2-3 left-associatively" $ do
