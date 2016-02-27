@@ -4,6 +4,7 @@ economy
 A simple command-line tool for tracking montly incomes and expenses.
 It's written in Haskell for no reason other than fun, and it's backed by JSON because [Aeson](https://github.com/bos/aeson) is cool.
 
+
 Installation
 ------------
 Installing `economy` should be as easy as `make` (and maybe `make deps` for installing its dependencies).
@@ -14,6 +15,7 @@ cd economy
 make deps
 make
 ```
+
 
 Usage
 -----
@@ -34,6 +36,7 @@ If you want to explicitly specify which datafile to use the `--file` option:
 economy --file example.json year
 ```
 
+
 Tag feature
 ---
 If you specify `tags` in your incomes and expenses in the JSON then you can apply filters with them:
@@ -42,3 +45,14 @@ economy month jun --without=fun
 ```
 where you might have tagged your beer expenses with `"tags": ["fun"]`.
 
+
+Arithemtics feature
+-------------------
+If you need to do some calculations to figure out the amounts, you can do so:
+```json
+{
+  "name": "Food",
+  "amount": "150+120+120+100/4*10",
+  "tags": ["necessary"]
+}
+```
