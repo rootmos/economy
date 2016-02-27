@@ -1,5 +1,16 @@
 {-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
-module Economy ( Economy, eitherDecode, detailsOfMonth, detailsOfYear ) where
+module Economy ( Economy
+               , Tag
+               , decodeEconomy
+               , DecodeOptions(..)
+               , defaultDecodeOptions
+               , detailsOfMonth
+               , detailsOfYear
+               , incomeWithTag
+               , incomeWithoutTag
+               , expenseWithTag
+               , expenseWithoutTag
+               ) where
 
 import Arithmetics
 import Month
@@ -7,14 +18,17 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.Scientific
 import Data.Maybe
-import Data.List (transpose)
+import Data.List (transpose, intercalate)
 import qualified Data.Text as T
+import qualified Data.ByteString.Lazy as B
 import GHC.Generics
 import Text.PrettyPrint.Boxes hiding ((<>))
+import Data.Bifunctor
 
 -- Types
 
 type Name = String
+type Tag = String
 
 
 -- Classes
@@ -67,6 +81,7 @@ data Expense = Expense { expenseName :: Name
                        , expenseAmount :: Money
                        , expenseMonths :: Maybe [Month]
                        , expenseNotes :: Maybe String
+                       , expenseTags :: Maybe [Tag]
                        }
     deriving Show
 
@@ -75,7 +90,8 @@ instance FromJSON Expense where
         v .: "name" <*>
         v .: "amount" <*>
         v .:? "months" <*>
-        v .:? "notes"
+        v .:? "notes" <*>
+        v .:? "tags"
     parseJSON invalid = typeMismatch "Expense" invalid
 
 instance ToMoney Expense where
@@ -92,6 +108,7 @@ data Income = Income { incomeName :: Name
                      , incomeAmount :: Money
                      , incomeMonths :: Maybe [Month]
                      , incomeNotes :: Maybe String
+                     , incomeTags :: Maybe [Tag]
                      }
     deriving Show
 
@@ -100,7 +117,8 @@ instance FromJSON Income where
         v .: "name" <*>
         v .: "amount" <*>
         v .:? "months" <*>
-        v .:? "notes"
+        v .:? "notes" <*>
+        v .:? "tags"
     parseJSON invalid = typeMismatch "Income" invalid
 
 instance ToMoney Income where
@@ -127,10 +145,11 @@ monthlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` mo
                                       }
 
 economyBox :: Economy -> Box
-economyBox economy = hsep 1 left [names, amounts, notes]
+economyBox economy = hsep 1 left [names, amounts, tags, notes]
     where
         names = vcat left . map text $ columnified !! 0
         amounts = vcat right . map text $ columnified !! 1
+        tags = vcat left . map text $ columnified !! 4
         notes = vcat left . map text $ columnified !! 3
         columnified = transpose $ listify economy
 
@@ -141,16 +160,58 @@ listify economy = (map listifyIncome (incomes economy)) ++ (map listifyExpense (
                                     , show . money
                                     , maybeEmptyString . incomeMonths
                                     , fromMaybe "" . incomeNotes
+                                    , prettyTags . incomeTags
                                     ]
         listifyExpense e = map ($ e) [ expenseName
                                      , show . money
                                      , maybeEmptyString . expenseMonths
                                      , fromMaybe "" . expenseNotes
+                                     , prettyTags . expenseTags
                                      ]
         separator = [["---", "---", "", ""]]
         summarow = [["", show . money $ economy, ""]]
+        prettyTags :: Maybe [Tag] -> String
+        prettyTags Nothing = ""
+        prettyTags (Just []) = ""
+        prettyTags (Just tags) = intercalate ", " tags
 
 maybeEmptyString :: Show a => Maybe a -> String
 maybeEmptyString (Just x) = show x
 maybeEmptyString Nothing = ""
 
+
+-- Decoding stuff
+
+data DecodeOptions = DecodeOptions { incomeFilters :: [Income -> Bool]
+                                   , expenseFilters :: [Expense -> Bool]
+                                   }
+
+defaultDecodeOptions :: DecodeOptions
+defaultDecodeOptions = DecodeOptions { incomeFilters = []
+                                     , expenseFilters = []
+                                     }
+
+incomeWithTag :: Tag -> Income -> Bool
+incomeWithTag tag (Income {incomeTags = Just tags}) = tag `elem` tags
+incomeWithTag _ _  = False
+
+incomeWithoutTag :: Tag -> Income -> Bool
+incomeWithoutTag tag (Income {incomeTags = Just tags}) = tag `notElem` tags
+incomeWithoutTag _ _ = True
+
+expenseWithTag :: Tag -> Expense -> Bool
+expenseWithTag tag (Expense {expenseTags = Just tags}) = tag `elem` tags
+expenseWithTag _ _ = False
+
+expenseWithoutTag :: Tag -> Expense -> Bool
+expenseWithoutTag tag (Expense {expenseTags = Just tags}) = tag `notElem` tags
+expenseWithoutTag _ _ = True
+
+decodeEconomy :: DecodeOptions -> B.ByteString -> Either String Economy
+decodeEconomy options string = second applyFilters $ eitherDecode string
+    where
+        applyFilters economy = economy { incomes = applyIncomeFilters $ incomes economy
+                                       , expenses = applyExpenseFilters $ expenses economy
+                                       }
+        applyIncomeFilters = filter (\i -> and $ map ($i) (incomeFilters options))
+        applyExpenseFilters = filter (\i -> and $ map ($i) (expenseFilters options))
