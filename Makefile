@@ -1,13 +1,14 @@
 GHC_OPTS=-Wall
 
-SRC=economy.hs arithmetics.hs
+SRC=Main.hs Economy.hs Arithmetics.hs
+TARGET=economy
 
-economy: $(SRC)
-	ghc $(GHC_OPTS) $^
+$(TARGET): $(SRC)
+	ghc $(GHC_OPTS) -o $@ $^
 
 .PHONY: test
 test: $(SRC)
-	runhaskell $(GHC_OPTS) arithmetics.hs
+	runhaskell $(GHC_OPTS) Arithmetics.hs
 
 .PHONY: deps
 deps:
@@ -16,3 +17,7 @@ deps:
 .PHONY: ghci
 ghci: $(SRC)
 	ghci $^
+
+.PHONY: clean
+clean:
+	rm *.o *.hi $(TARGET)

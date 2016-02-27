@@ -1,15 +1,15 @@
 {-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
+module Economy ( Economy, eitherDecode, summarize ) where
 
 import Arithmetics
 import Data.Aeson
+import Data.Aeson.Types
 import Data.Scientific
 import Data.Maybe
 import Data.List (transpose)
-import Options.Applicative
-import qualified Data.ByteString.Lazy as B
 import qualified Data.Text as T
 import GHC.Generics
-import Text.PrettyPrint.Boxes
+import Text.PrettyPrint.Boxes hiding ((<>))
 
 newtype Money = Money Int
     deriving (Eq, Ord)
@@ -36,7 +36,7 @@ instance FromJSON Money where
     parseJSON (String s) = case arithmetics (T.unpack s) of
                              Left e -> fail e
                              Right n -> pure (Money n)
-    parseJSON _ = empty
+    parseJSON invalid = typeMismatch "Money" invalid
 
 
 data Expense = Expense { expenseName :: Name
@@ -50,7 +50,7 @@ instance FromJSON Expense where
         v .: "name" <*>
         v .: "amount" <*>
         v .:? "months"
-    parseJSON _ = empty
+    parseJSON invalid = typeMismatch "Expense" invalid
 
 
 data Income = Income { incomeName :: Name
@@ -64,7 +64,7 @@ instance FromJSON Income where
         v .: "name" <*>
         v .: "amount" <*>
         v .:? "months"
-    parseJSON _ = empty
+    parseJSON invalid = typeMismatch "Income" invalid
 
 
 class ToMoney a where
@@ -90,10 +90,6 @@ instance MaybeMontly Income where
     willOccurInMonth (Income { incomeMonths = Just months }) month = month `elem` months
     willOccurInMonth _ _ = True
 
-data Config = Config { dataFilename :: FilePath }
-
-configParser :: Parser Config
-configParser = Config <$> argument str (metavar "DATA")
 
 monthlyEconomy :: Economy -> Int -> Economy
 monthlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` month) (incomes economy)
@@ -101,7 +97,7 @@ monthlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` mo
                                       }
 
 summarize :: Economy -> IO ()
-summarize economy = printBox $ hsep 3 bottom $ map (economyBox . monthlyEconomy economy) [1..12]
+summarize = printBox .economyBox
 
 economyBox :: Economy -> Box
 economyBox economy = hsep 1 left [names, amounts]
@@ -121,17 +117,4 @@ listify economy = (map listifyIncome (incomes economy)) ++ (map listifyExpense (
 maybeEmptyString :: Show a => Maybe a -> String
 maybeEmptyString (Just x) = show x
 maybeEmptyString Nothing = ""
-
-fromFile :: FilePath -> IO Economy
-fromFile path = do
-    datafileContent <- B.readFile path 
-    case eitherDecode datafileContent of
-      Left err -> fail err
-      Right economy -> return economy 
-
-main :: IO ()
-main = do
-    config <- execParser $ info (helper <*> configParser) fullDesc
-    economy <- fromFile (dataFilename config)
-    summarize economy
 
