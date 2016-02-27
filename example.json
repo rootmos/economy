@@ -1,0 +1,51 @@
+{
+    "incomes": [
+        {
+            "name": "Foo Inc",
+            "amount": 10000,
+            "notes": "Foo Inc always pays too little",
+            "tags": ["salary"]
+        }
+    ],
+    "expenses": [
+        {
+            "name": "Rent",
+            "amount": 2000,
+            "tags": ["necessary"]
+        },
+        {
+            "name": "Beer",
+            "amount": 800,
+            "tags": ["fun"]
+        },
+        {
+            "name": "Magic: The Gathering",
+            "amount": 100,
+            "tags": ["unnecessary"]
+        },
+        {
+            "name": "Netflix & Chill",
+            "amount": 150,
+            "tags": ["fun"]
+        },
+        {
+            "name": "Food",
+            "amount": "150+120+120+100/4*10",
+            "tags": ["necessary"]
+        },
+        {
+            "name": "Insurance",
+            "amount": 1000,
+            "months": ["feb", "may", "aug", "nov"],
+            "tags": ["necessary"]
+        },
+        {
+            "name": "Car service",
+            "amount": "3000",
+            "months": ["march"],
+            "tags": ["necessary"],
+            "notes": "That stupid car is always breaking!"
+        }
+    ]
+}
+
