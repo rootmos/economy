@@ -2,6 +2,7 @@
 module Economy ( Economy, eitherDecode, summarize ) where
 
 import Arithmetics
+import Month
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Scientific
@@ -10,6 +11,22 @@ import Data.List (transpose)
 import qualified Data.Text as T
 import GHC.Generics
 import Text.PrettyPrint.Boxes hiding ((<>))
+
+-- Types
+
+type Name = String
+
+
+-- Classes
+
+class ToMoney a where
+    money :: a -> Money
+
+class MaybeMontly a where
+    willOccurInMonth :: a -> Month -> Bool
+
+
+-- Money type
 
 newtype Money = Money Int
     deriving (Eq, Ord)
@@ -25,12 +42,6 @@ instance Num Money where
     fromInteger n = Money (fromInteger n)
     signum (Money n) = Money (signum n)
 
-type Name = String
-
-data Economy = Economy { incomes :: [Income], expenses :: [Expense] }
-    deriving (Show, Generic)
-instance FromJSON Economy
-
 instance FromJSON Money where
     parseJSON (Number n) = pure $ Money (fromJust $ toBoundedInteger n)
     parseJSON (String s) = case arithmetics (T.unpack s) of
@@ -39,9 +50,22 @@ instance FromJSON Money where
     parseJSON invalid = typeMismatch "Money" invalid
 
 
+
+-- Economy type
+
+data Economy = Economy { incomes :: [Income], expenses :: [Expense] }
+    deriving (Show, Generic)
+instance FromJSON Economy
+
+instance ToMoney Economy where
+    money economy = sum (map money $ incomes economy) + sum (map money $ expenses economy)
+
+
+-- Expense type
+
 data Expense = Expense { expenseName :: Name
                        , expenseAmount :: Money
-                       , expenseMonths :: Maybe [Int]
+                       , expenseMonths :: Maybe [Month]
                        }
     deriving Show
 
@@ -52,10 +76,19 @@ instance FromJSON Expense where
         v .:? "months"
     parseJSON invalid = typeMismatch "Expense" invalid
 
+instance ToMoney Expense where
+    money = negate . expenseAmount
+
+instance MaybeMontly Expense where
+    willOccurInMonth (Expense { expenseMonths = Just months }) month = month `elem` months
+    willOccurInMonth _ _ = True
+
+
+-- Income type
 
 data Income = Income { incomeName :: Name
                      , incomeAmount :: Money
-                     , incomeMonths :: Maybe [Int]
+                     , incomeMonths :: Maybe [Month]
                      }
     deriving Show
 
@@ -66,32 +99,15 @@ instance FromJSON Income where
         v .:? "months"
     parseJSON invalid = typeMismatch "Income" invalid
 
-
-class ToMoney a where
-    money :: a -> Money
-
-instance ToMoney Expense where
-    money = negate . expenseAmount
-
 instance ToMoney Income where
     money = incomeAmount
-
-instance ToMoney Economy where
-    money economy = sum (map money $ incomes economy) + sum (map money $ expenses economy)
-
-class MaybeMontly a where
-    willOccurInMonth :: a -> Int -> Bool
-
-instance MaybeMontly Expense where
-    willOccurInMonth (Expense { expenseMonths = Just months }) month = month `elem` months
-    willOccurInMonth _ _ = True
 
 instance MaybeMontly Income where
     willOccurInMonth (Income { incomeMonths = Just months }) month = month `elem` months
     willOccurInMonth _ _ = True
 
 
-monthlyEconomy :: Economy -> Int -> Economy
+monthlyEconomy :: Economy -> Month -> Economy
 monthlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` month) (incomes economy)
                                       , expenses = filter (`willOccurInMonth` month) (expenses economy)
                                       }

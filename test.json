@@ -13,7 +13,7 @@
         {
             "name": "Quarterly",
             "amount": 1000,
-            "months": [1, 4, 7, 10] 
+            "months": [1, "may", "Jul", 10] 
         },
         {
             "name": "Half-yearly",
