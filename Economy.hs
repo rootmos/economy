@@ -66,6 +66,7 @@ instance ToMoney Economy where
 data Expense = Expense { expenseName :: Name
                        , expenseAmount :: Money
                        , expenseMonths :: Maybe [Month]
+                       , expenseNotes :: Maybe String
                        }
     deriving Show
 
@@ -73,7 +74,8 @@ instance FromJSON Expense where
     parseJSON (Object v) = Expense <$> 
         v .: "name" <*>
         v .: "amount" <*>
-        v .:? "months"
+        v .:? "months" <*>
+        v .:? "notes"
     parseJSON invalid = typeMismatch "Expense" invalid
 
 instance ToMoney Expense where
@@ -89,6 +91,7 @@ instance MaybeMontly Expense where
 data Income = Income { incomeName :: Name
                      , incomeAmount :: Money
                      , incomeMonths :: Maybe [Month]
+                     , incomeNotes :: Maybe String
                      }
     deriving Show
 
@@ -96,7 +99,8 @@ instance FromJSON Income where
     parseJSON (Object v) = Income <$> 
         v .: "name" <*>
         v .: "amount" <*>
-        v .:? "months"
+        v .:? "months" <*>
+        v .:? "notes"
     parseJSON invalid = typeMismatch "Income" invalid
 
 instance ToMoney Income where
@@ -116,18 +120,27 @@ summarize :: Economy -> IO ()
 summarize = printBox .economyBox
 
 economyBox :: Economy -> Box
-economyBox economy = hsep 1 left [names, amounts]
+economyBox economy = hsep 1 left [names, amounts, notes]
     where
         names = vcat left . map text $ columnified !! 0
         amounts = vcat right . map text $ columnified !! 1
+        notes = vcat left . map text $ columnified !! 3
         columnified = transpose $ listify economy
 
 listify :: Economy -> [[String]]
 listify economy = (map listifyIncome (incomes economy)) ++ (map listifyExpense (expenses economy)) ++ separator ++ summarow
     where
-        listifyIncome i = map ($ i) [incomeName, show . money, maybeEmptyString . incomeMonths]
-        listifyExpense e = map ($ e) [expenseName, show . money, maybeEmptyString . expenseMonths]
-        separator = [["---", "---", "---"]]
+        listifyIncome i = map ($ i) [ incomeName
+                                    , show . money
+                                    , maybeEmptyString . incomeMonths
+                                    , fromMaybe "" . incomeNotes
+                                    ]
+        listifyExpense e = map ($ e) [ expenseName
+                                     , show . money
+                                     , maybeEmptyString . expenseMonths
+                                     , fromMaybe "" . expenseNotes
+                                     ]
+        separator = [["---", "---", "", ""]]
         summarow = [["", show . money $ economy, ""]]
 
 maybeEmptyString :: Show a => Maybe a -> String
