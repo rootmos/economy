@@ -1,9 +1,12 @@
 module Main where
 
+import Month
 import Economy
+
+import System.FilePath
+import System.Directory
 import Options.Applicative
 import qualified Data.ByteString.Lazy as B
-import Month
 
 data Config = Config { dataFilename :: FilePath
                      , subcommand :: SubCommand}
@@ -12,11 +15,9 @@ data SubCommand = ShowMonth ShowMonthOptions
 
 data ShowMonthOptions = ShowMonthOptions { showMonthCmdMonth :: Month }
 
-defaultFilePath :: String
-defaultFilePath = "~/.config/economy.json"
 
-configParser :: Parser Config
-configParser = Config <$> strOption ( long "file"
+configParser :: FilePath -> Parser Config
+configParser defaultFilePath = Config <$> strOption ( long "file"
                                     <> short 'f'
                                     <> metavar "FILE"
                                     <> value defaultFilePath
@@ -43,9 +44,15 @@ fromFile path = do
 run :: Economy -> SubCommand -> IO ()
 run economy (ShowMonth options) = summarize $ monthlyEconomy economy (showMonthCmdMonth options) 
 
+getDefaultFilePath :: IO FilePath
+getDefaultFilePath = do
+    home <- getHomeDirectory
+    return $ home </> ".config" </> "economy.json"
+
 main :: IO ()
 main = do
-    config <- execParser $ info (helper <*> configParser) fullDesc
+    defaultFilePath <- getDefaultFilePath
+    config <- execParser $ info (helper <*> configParser defaultFilePath) fullDesc
     economy <- fromFile (dataFilename config)
     run economy (subcommand config)
 
