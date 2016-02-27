@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
-module Economy ( Economy, eitherDecode, summarize ) where
+module Economy ( Economy, eitherDecode, summarize, monthlyEconomy ) where
 
 import Arithmetics
 import Month

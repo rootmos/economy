@@ -16,6 +16,9 @@ newtype Month = Month Int
 instance Show Month where
     show (Month i) = months !! (i-1)
 
+instance Read Month where
+    readsPrec _ = reader
+
 instance FromJSON Month where
     parseJSON (Number n) | n >= 1 && n <= 12 = pure $ Month (fromJust $ toBoundedInteger n)
     parseJSON (String s) = case parseMonth (T.unpack s) of
@@ -31,6 +34,22 @@ parseMonth :: String -> Maybe Month
 parseMonth string = case findIndices (isPrefixOf (map toLower string)) lowerCaseMonths of
                      [x] -> Just (Month (x+1))
                      _ -> Nothing
+
+reader :: ReadS Month
+reader string = catMaybes $ map ($ string) (map (monthTester []) months)
+
+monthTester :: String -> String -> String -> Maybe (Month, String)
+monthTester matched [] i = case parseMonth (reverse matched) of
+                             Just m -> Just (m, i)
+                             Nothing -> Nothing
+monthTester matched _ [] = case parseMonth (reverse matched) of
+                             Just m -> Just (m, [])
+                             Nothing -> Nothing
+monthTester matched (x:xs) i@(y:ys)
+    | toLower x == toLower y = monthTester (x:matched) xs ys 
+    | otherwise = case parseMonth (reverse matched) of
+                    Just m -> Just (m, i)
+                    Nothing -> Nothing
 
 main :: IO ()
 main = hspec $ do
