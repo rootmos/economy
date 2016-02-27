@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
-module Economy ( Economy, eitherDecode, summarize, monthlyEconomy ) where
+module Economy ( Economy, eitherDecode, detailsOfMonth, detailsOfYear ) where
 
 import Arithmetics
 import Month
@@ -82,7 +82,7 @@ instance ToMoney Expense where
     money = negate . expenseAmount
 
 instance MaybeMontly Expense where
-    willOccurInMonth (Expense { expenseMonths = Just months }) month = month `elem` months
+    willOccurInMonth (Expense { expenseMonths = Just ms }) m = m `elem` ms
     willOccurInMonth _ _ = True
 
 
@@ -107,17 +107,24 @@ instance ToMoney Income where
     money = incomeAmount
 
 instance MaybeMontly Income where
-    willOccurInMonth (Income { incomeMonths = Just months }) month = month `elem` months
+    willOccurInMonth (Income { incomeMonths = Just ms }) m = m `elem` ms
     willOccurInMonth _ _ = True
 
 
+detailsOfMonth :: Economy -> Month -> IO ()
+detailsOfMonth economy month = printBox . economyBox $ monthlyEconomy economy month
+
+detailsOfYear :: Economy -> IO ()
+detailsOfYear economy = printBox $ hsep 2 left [labels, numbers]
+    where
+        labels = vcat left . map text $ (map show months) ++ ["", ""]
+        numbers = vcat right . map text $ (map show sums) ++ ["---", show $ sum sums]
+        sums = map (money . monthlyEconomy economy) months
+
 monthlyEconomy :: Economy -> Month -> Economy
 monthlyEconomy economy month = economy { incomes = filter (`willOccurInMonth` month) (incomes economy)
-                                      , expenses = filter (`willOccurInMonth` month) (expenses economy)
+                                       , expenses = filter (`willOccurInMonth` month) (expenses economy)
                                       }
-
-summarize :: Economy -> IO ()
-summarize = printBox .economyBox
 
 economyBox :: Economy -> Box
 economyBox economy = hsep 1 left [names, amounts, notes]

@@ -11,7 +11,7 @@ import qualified Data.ByteString.Lazy as B
 data Config = Config { dataFilename :: FilePath
                      , subcommand :: SubCommand}
 
-data SubCommand = ShowMonth ShowMonthOptions
+data SubCommand = ShowMonth ShowMonthOptions | ShowYear
 
 data ShowMonthOptions = ShowMonthOptions { showMonthCmdMonth :: Month }
 
@@ -25,13 +25,19 @@ configParser defaultFilePath = Config <$> strOption ( long "file"
                       <*> subcommandParser
 
 subcommandParser :: Parser SubCommand
-subcommandParser = subparser (command "month" (info (helper <*> showMonthParser) (progDesc "Show details for a month")))
+subcommandParser = subparser ( command "month" (info (helper <*> showMonthParser) (progDesc "Show details for a month"))
+                             <> command "year" (info (helper <*> showYearParser) (progDesc "Show the whole year"))
+                             )
+
 
 showMonthParser :: Parser SubCommand
 showMonthParser = ShowMonth <$> showMonthOptionsParser
 
 showMonthOptionsParser :: Parser ShowMonthOptions
 showMonthOptionsParser = ShowMonthOptions <$> argument auto ( metavar "MONTH" )
+
+showYearParser :: Parser SubCommand
+showYearParser = pure ShowYear
 
 fromFile :: FilePath -> IO Economy
 fromFile path = do
@@ -42,7 +48,8 @@ fromFile path = do
 
 
 run :: Economy -> SubCommand -> IO ()
-run economy (ShowMonth options) = summarize $ monthlyEconomy economy (showMonthCmdMonth options) 
+run economy (ShowMonth options) = detailsOfMonth economy (showMonthCmdMonth options) 
+run economy ShowYear = detailsOfYear economy
 
 getDefaultFilePath :: IO FilePath
 getDefaultFilePath = do

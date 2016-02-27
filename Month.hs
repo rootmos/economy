@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Month (Month) where
+module Month (Month, months) where
 
 import Test.Hspec
 import Data.List
@@ -14,7 +14,7 @@ newtype Month = Month Int
     deriving (Eq, Num)
 
 instance Show Month where
-    show (Month i) = months !! (i-1)
+    show (Month i) = capitalizedMonths !! (i-1)
 
 instance Read Month where
     readsPrec _ = reader
@@ -27,8 +27,14 @@ instance FromJSON Month where
     parseJSON invalid = typeMismatch "Month" invalid
 
 
-months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-lowerCaseMonths = map (map toLower) months
+months :: [Month]
+months = map Month [1..12]
+
+capitalizedMonths :: [String]
+capitalizedMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+lowerCaseMonths :: [String]
+lowerCaseMonths = map (map toLower) capitalizedMonths
 
 parseMonth :: String -> Maybe Month
 parseMonth string = case findIndices (isPrefixOf (map toLower string)) lowerCaseMonths of
@@ -36,7 +42,7 @@ parseMonth string = case findIndices (isPrefixOf (map toLower string)) lowerCase
                      _ -> Nothing
 
 reader :: ReadS Month
-reader string = catMaybes $ map ($ string) (map (monthTester []) months)
+reader string = catMaybes $ map ($ string) (map (monthTester []) capitalizedMonths)
 
 monthTester :: String -> String -> String -> Maybe (Month, String)
 monthTester matched [] i = case parseMonth (reverse matched) of
