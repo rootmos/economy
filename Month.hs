@@ -15,7 +15,7 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Month (Month, months) where
+module Month (Month, months, getCurrentMonth) where
 
 import Test.Hspec
 import Data.List
@@ -25,6 +25,7 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.Scientific
 import qualified Data.Text as T
+import Data.Time (toGregorian, localDay, zonedTimeToLocalTime, getZonedTime)
 
 newtype Month = Month Int
     deriving (Eq, Num)
@@ -45,6 +46,11 @@ instance FromJSON Month where
 
 months :: [Month]
 months = map Month [1..12]
+
+getCurrentMonth :: IO Month
+getCurrentMonth = do
+    (_, m, _) <- toGregorian . localDay . zonedTimeToLocalTime <$> getZonedTime
+    return $ Month m
 
 capitalizedMonths :: [String]
 capitalizedMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]

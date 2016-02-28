@@ -33,8 +33,8 @@ data SubCommand = ShowMonth ShowMonthOptions | ShowYear
 data ShowMonthOptions = ShowMonthOptions { showMonthCmdMonth :: Month }
 
 
-configParser :: FilePath -> Parser Config
-configParser defaultFilePath = Config
+configParser :: FilePath -> Month -> Parser Config
+configParser defaultFilePath currentMonth = Config
     <$> strOption ( long "file"
                   <> short 'f'
                   <> metavar "FILE"
@@ -48,21 +48,20 @@ configParser defaultFilePath = Config
                         <> metavar "TAG"
                         <> help "Only consider entries without tag TAG"))
     <*> subcommandParser
-
-subcommandParser :: Parser SubCommand
-subcommandParser = subparser ( command "month" (info (helper <*> showMonthParser) (progDesc "Show details for a month"))
-                             <> command "year" (info (helper <*> showYearParser) (progDesc "Show the whole year"))
-                             )
-
-
-showMonthParser :: Parser SubCommand
-showMonthParser = ShowMonth <$> showMonthOptionsParser
-
-showMonthOptionsParser :: Parser ShowMonthOptions
-showMonthOptionsParser = ShowMonthOptions <$> argument auto ( metavar "MONTH" )
-
-showYearParser :: Parser SubCommand
-showYearParser = pure ShowYear
+        where
+            subcommandParser :: Parser SubCommand
+            subcommandParser = subparser ( command "month" (info (helper <*> showMonthParser) (progDesc "Show details for a month"))
+                                         <> command "year" (info (helper <*> showYearParser) (progDesc "Show the whole year"))
+                                         )
+            
+            showMonthParser :: Parser SubCommand
+            showMonthParser = ShowMonth <$> showMonthOptionsParser
+            
+            showMonthOptionsParser :: Parser ShowMonthOptions
+            showMonthOptionsParser = ShowMonthOptions <$> argument auto (metavar "MONTH" <> value currentMonth)
+            
+            showYearParser :: Parser SubCommand
+            showYearParser = pure ShowYear
 
 fromFile :: Config -> IO Economy
 fromFile config = do
@@ -89,7 +88,8 @@ getDefaultFilePath = do
 main :: IO ()
 main = do
     defaultFilePath <- getDefaultFilePath
-    config <- execParser $ info (helper <*> configParser defaultFilePath) fullDesc
+    currentMonth <- getCurrentMonth
+    config <- execParser $ info (helper <*> configParser defaultFilePath currentMonth) fullDesc
     economy <- fromFile config
     run economy (subcommand config)
 
