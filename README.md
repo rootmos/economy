@@ -1,7 +1,7 @@
 economy
 =======
 
-A simple command-line tool for tracking montly incomes and expenses.
+A simple command-line tool for tracking monthly incomes and expenses.
 It's written in Haskell for no reason other than fun, and it's backed by JSON because [Aeson](https://github.com/bos/aeson) is cool.
 
 
@@ -31,7 +31,7 @@ and to see details for a specific month, type:
 economy month may
 ```
 
-If you want to explicitly specify which datafile to use the `--file` option:
+If you want to explicitly specify which data-file to use the `--file` option:
 ```
 economy --file example.json year
 ```
@@ -46,7 +46,7 @@ economy month jun --without=fun
 where you might have tagged your beer expenses with `"tags": ["fun"]`.
 
 
-Arithemtics feature
+Arithmetics feature
 -------------------
 If you need to do some calculations to figure out the amounts, you can do so:
 ```json
