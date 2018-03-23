@@ -1,3 +1,4 @@
 economy
 *.hi
 *.o
+.stack-work

@@ -22,6 +22,7 @@ import System.FilePath
 import System.Directory
 import Options.Applicative
 import qualified Data.ByteString.Lazy as B
+import Data.Monoid
 
 data Config = Config { dataFilename :: FilePath
                      , withTags :: [Tag]
@@ -53,19 +54,19 @@ configParser defaultFilePath currentMonth = Config
             subcommandParser = subparser ( command "month" (info (helper <*> showMonthParser) (progDesc "Show details for a month"))
                                          <> command "year" (info (helper <*> showYearParser) (progDesc "Show the whole year"))
                                          )
-            
+
             showMonthParser :: Parser SubCommand
             showMonthParser = ShowMonth <$> showMonthOptionsParser
-            
+
             showMonthOptionsParser :: Parser ShowMonthOptions
             showMonthOptionsParser = ShowMonthOptions <$> argument auto (metavar "MONTH" <> value currentMonth)
-            
+
             showYearParser :: Parser SubCommand
             showYearParser = pure ShowYear
 
 fromFile :: Config -> IO Economy
 fromFile config = do
-    datafileContent <- B.readFile $ dataFilename config 
+    datafileContent <- B.readFile $ dataFilename config
 
     let myIncomeFilters = (map incomeWithTag (withTags config)) ++ (map incomeWithoutTag (withoutTags config))
     let myExpenseFilters = (map expenseWithTag (withTags config)) ++ (map expenseWithoutTag (withoutTags config))
@@ -73,11 +74,11 @@ fromFile config = do
 
     case decodeEconomy decodeOptions datafileContent of
       Left err -> fail err
-      Right economy -> return economy 
+      Right economy -> return economy
 
 
 run :: Economy -> SubCommand -> IO ()
-run economy (ShowMonth options) = detailsOfMonth economy (showMonthCmdMonth options) 
+run economy (ShowMonth options) = detailsOfMonth economy (showMonthCmdMonth options)
 run economy ShowYear = detailsOfYear economy
 
 getDefaultFilePath :: IO FilePath
